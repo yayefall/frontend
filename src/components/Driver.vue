@@ -250,12 +250,18 @@ export default {
         }
 
         await this.fetchDrivers();
-        this.resetForm();
-
-        // 🔥 FERMETURE 100% GARANTIE
+         this.resetForm();
+        // 🔥 FERMETURE 100% GARANTIE + suppression du flou
         const modalEl = document.getElementById("addDriverModal");
         const modalInstance = Modal.getOrCreateInstance(modalEl);
+
         modalInstance.hide();
+
+        // Supprime le backdrop si resté bloqué
+        document.body.classList.remove('modal-open');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(b => b.remove());
+
 
         // ✔ Message succès
         this.successMessage = this.editingDriver

@@ -15,7 +15,7 @@
         type="text"
         class="form-control"
         placeholder="Rechercher un utilisateur..."
-        style="width: 250px"
+        style="width:250px"
       />
     </div>
 
@@ -44,42 +44,36 @@
                 <button class="btn btn-sm btn-primary me-2" @click="openEditModal(u)">
                   <i class="bi bi-pencil-square"></i>
                 </button>
-
                 <button class="btn btn-sm btn-danger" @click="deleteUser(u.id)">
                   <i class="bi bi-trash"></i>
                 </button>
               </td>
             </tr>
-
             <tr v-if="filteredUsers.length === 0">
               <td colspan="5" class="text-center text-muted">Aucun utilisateur trouvé</td>
             </tr>
           </tbody>
-
-          <!-- Pagination -->
-          <tfoot class="justify-content-center mt-3">
-            <tr>
-              <td colspan="5">
-                <nav class="d-flex justify-content-center">
-                  <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                      <button class="page-link" @click="currentPage--">Précédent</button>
-                    </li>
-
-                    <li v-for="page in totalPages" :key="page"
-                        class="page-item" :class="{ active: currentPage === page }">
-                      <button class="page-link" @click="currentPage = page">{{ page }}</button>
-                    </li>
-
-                    <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                      <button class="page-link" @click="currentPage++">Suivant</button>
-                    </li>
-                  </ul>
-                </nav>
-              </td>
-            </tr>
-          </tfoot>
         </table>
+
+        <!-- Pagination -->
+        <nav class="d-flex justify-content-center mt-3">
+          <ul class="pagination">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <button class="page-link" @click="currentPage--">Précédent</button>
+            </li>
+            <li
+              v-for="page in totalPages"
+              :key="page"
+              class="page-item"
+              :class="{ active: currentPage === page }"
+            >
+              <button class="page-link" @click="currentPage = page">{{ page }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <button class="page-link" @click="currentPage++">Suivant</button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
 
@@ -87,6 +81,7 @@
     <div class="modal fade" id="userModal" tabindex="-1">
       <div class="modal-dialog">
         <div class="modal-content">
+
           <div class="modal-header bg-primary text-white">
             <h5 class="modal-title">{{ editingUser ? "Modifier l'utilisateur" : "Ajouter un utilisateur" }}</h5>
             <button class="btn-close" data-bs-dismiss="modal"></button>
@@ -94,9 +89,14 @@
 
           <form @submit.prevent="saveUser">
             <div class="modal-body">
+
               <!-- Avatar -->
               <div class="mb-3 text-center">
                 <img :src="form.avatar || defaultAvatar" width="80" height="80" class="rounded-circle border"/>
+              </div>
+              <div class="mb-3">
+                <label>Choisir un avatar</label>
+                <input type="file" class="form-control" @change="uploadAvatar" />
               </div>
 
               <!-- Nom -->
@@ -125,6 +125,7 @@
                   <option value="admin">Admin</option>
                 </select>
               </div>
+
             </div>
 
             <div class="modal-footer">
@@ -136,12 +137,13 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
 import api from "../api.js";
-import { Modal, Toast } from "bootstrap"; // ✅ Correct import
+import { Modal, Toast } from "bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 export default {
@@ -195,43 +197,37 @@ export default {
       Modal.getOrCreateInstance(document.getElementById("userModal")).show();
     },
 
-   async saveUser() {
-  try {
-    if (!this.editingUser && !this.form.password) {
-      alert("Veuillez saisir un mot de passe pour l'ajout !");
-      return;
-    }
+    uploadAvatar(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => { this.form.avatar = e.target.result; };
+      reader.readAsDataURL(file);
+    },
 
-    if (this.editingUser) {
-      await api.put(`/register/${this.editingUser.id}`, this.form);
-      this.showToast("Utilisateur modifié !");
-    } else {
-      console.log("Ajout user :", this.form); // debug
-      await api.post("/register", this.form);
-      this.showToast("Utilisateur ajouté !");
-    }
-
-    await this.fetchUsers();
-    this.resetForm();
-
-    // Fermeture du modal
-    const modalEl = document.getElementById("userModal");
-    Modal.getOrCreateInstance(modalEl).hide();
-
-    this.successMessage = this.editingUser
-      ? "Utilisateur modifié avec succès !"
-      : "Utilisateur ajouté avec succès !";
-
-    setTimeout(() => (this.successMessage = ""), 3000);
-    this.editingUser = null;
-
-  } catch (err) {
-    console.error("Erreur :", err.response || err);
-    this.successMessage = "Erreur lors de l'enregistrement. Réessaye.";
-    setTimeout(() => (this.successMessage = ""), 3500);
-  }
-},
-
+    async saveUser() {
+      try {
+        if (this.editingUser) {
+          await api.put(`/register/${this.editingUser.id}`, this.form);
+          this.showToast("Utilisateur modifié !");
+        } else {
+          await api.post("/register", this.form);
+          this.showToast("Utilisateur ajouté !");
+        }
+        await this.fetchUsers();
+        this.resetForm();
+        Modal.getOrCreateInstance(document.getElementById("userModal")).hide();
+        this.successMessage = this.editingUser
+          ? "Utilisateur modifié avec succès !"
+          : "Utilisateur ajouté avec succès !";
+        setTimeout(() => (this.successMessage = ""), 3000);
+        this.editingUser = null;
+      } catch (err) {
+        console.error("Erreur :", err.response || err);
+        this.successMessage = "Erreur lors de l'enregistrement.";
+        setTimeout(() => (this.successMessage = ""), 3500);
+      }
+    },
 
     resetForm() {
       this.form = { name: "", username: "", password: "", role: "user", avatar: "" };
@@ -247,8 +243,7 @@ export default {
 
     showToast(message) {
       const el = document.createElement("div");
-      el.className =
-        "toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3";
+      el.className = "toast position-fixed top-0 end-0 m-3 text-bg-success border-0";
       el.innerHTML = `
         <div class="d-flex">
           <div class="toast-body">${message}</div>
@@ -265,22 +260,8 @@ export default {
 </script>
 
 <style scoped>
-.save-btn {
-  background: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.table td,
-.table th {
-  vertical-align: middle;
-}
-.btn {
-  border-radius: 8px;
-}
-.pagination .active .page-link {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
-}
+.save-btn { background: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+.table td, .table th { vertical-align: middle; }
+.btn { border-radius: 8px; }
+.pagination .active .page-link { background-color: #0d6efd; border-color: #0d6efd; }
 </style>
