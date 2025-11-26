@@ -1,7 +1,7 @@
 <template>
   <div class="container mt-4">
-<div class="bg-dark py-3 mb-4">
-  <h3 class="text-center text-white m-0">Historique  Du Tableau de Bord </h3>
+<div class="py-3 mb-4">
+  <h3 class="text-center text-white m-0">HISTORIQUE DU TABLEAU DE BOARD </h3>
 </div>
 
     <!-- FILTRES -->

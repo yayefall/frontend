@@ -1,29 +1,31 @@
 <template>
   <div class="container mt-4">
- <!-- HEADERS -->
-      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-          <button class="save-btn " data-bs-toggle="modal" data-bs-target="#addEntretienModal">
-            <i class="bi bi-plus-lg"></i> Ajouter
-          </button>
-          <input
-            v-model="searchTerm"
-            type="text"
-            class="form-control"
-            placeholder="Rechercher un entretien..."
-            style="width: 250px"
-          />
-        </div>
+    <!-- message de succès -->
+    <div v-if="successMessage" class="alert alert-success text-center">
+      {{ successMessage }}
+    </div>
+
+    <!-- HEADERS -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+      <button class="save-btn" @click="openAddModal">
+        <i class="bi bi-plus-lg"></i> Ajouter
+      </button>
+      <input
+        v-model="searchTerm"
+        type="text"
+        class="form-control"
+        placeholder="Rechercher un entretien..."
+        style="width: 250px"
+      />
+    </div>
+
     <!-- TABLEAU -->
     <div class="card shadow-sm">
       <div class="card-body">
         <div class="table-responsive">
-          
-                <P colspan="5" class="text-center "> <strong>Liste des Entretiens</strong></P>
-              
+          <p colspan="5" class="text-center"><strong>Liste des Entretiens</strong></p>
           <table class="table table-hover align-middle mb-0">
-            
             <thead class="table-primary">
-              
               <tr>
                 <th>Date</th>
                 <th>Véhicule</th>
@@ -39,14 +41,12 @@
                 <td>{{ e.type }}</td>
                 <td>{{ e.remarques }}</td>
                 <td class="text-center">
-
-                  <!-- Icône Modifier (bleu) -->
-                   <button class="btn btn-sm btn-primary me-2" @click="openEditModal(l)">
+                  <!-- Modifier -->
+                  <button class="btn btn-sm btn-primary me-2" @click="openEditModal(e)">
                     <i class="bi bi-pencil-square"></i>
                   </button>
 
-
-                  <!-- Icône Supprimer (rouge) -->
+                  <!-- Supprimer -->
                   <button class="btn btn-sm btn-danger" @click="deleteEntretien(e.id)">
                     <i class="bi bi-trash"></i>
                   </button>
@@ -56,40 +56,36 @@
                 <td colspan="5" class="text-center text-muted">Aucun entretien trouvé</td>
               </tr>
             </tbody>
-                      <!-- PAGINATION -->
-<tfoot class="justify-content-center mt-3">
-  <tr>
-    <td colspan="5">
 
-      <nav class="d-flex justify-content-center">
-        <ul class="pagination">
+            <!-- PAGINATION -->
+            <tfoot class="justify-content-center mt-3">
+              <tr>
+                <td colspan="5">
+                  <nav class="d-flex justify-content-center">
+                    <ul class="pagination">
+                      <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                        <button class="page-link" @click="currentPage--">Précédent</button>
+                      </li>
 
-          <li class="page-item" :class="{ disabled: currentPage === 1 }">
-            <button class="page-link" @click="currentPage--">Précédent</button>
-          </li>
+                      <li
+                        v-for="page in totalPages"
+                        :key="page"
+                        class="page-item"
+                        :class="{ active: currentPage === page }"
+                      >
+                        <button class="page-link" @click="currentPage = page">
+                          {{ page }}
+                        </button>
+                      </li>
 
-          <li
-            v-for="page in totalPages"
-            :key="page"
-            class="page-item"
-            :class="{ active: currentPage === page }"
-          >
-            <button class="page-link" @click="currentPage = page">
-              {{ page }}
-            </button>
-          </li>
-
-          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-            <button class="page-link" @click="currentPage++">Suivant</button>
-          </li>
-
-        </ul>
-      </nav>
-
-    </td>
-  </tr>
-</tfoot>
-
+                      <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                        <button class="page-link" @click="currentPage++">Suivant</button>
+                      </li>
+                    </ul>
+                  </nav>
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -136,90 +132,130 @@
       </div>
     </div>
   </div>
-
-  <button
-  id="openModalBtn"
-  data-bs-toggle="modal"
-  data-bs-target="#addEntretienModal"
-  style="display: none;">
-  </button>
 </template>
 
 <script>
 import api from "../api.js";
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
+import { Modal } from "bootstrap";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 export default {
- data() {
-  return {
-    entretiens: [],
-    vehicules: [],
-    entretienForm: { vehicule_id: "", date_entretien: "", type: "", remarques: "" },
-    editingEntretien: null,
-    searchTerm: "",
-    currentPage: 1,       // page actuelle
-    perPage: 5            // nombre d'éléments par page
-  };
-},
+  data() {
+    return {
+      successMessage: "",
+      entretiens: [],
+      vehicules: [],
+      entretienForm: { vehicule_id: "", date_entretien: "", type: "", remarques: "" },
+      editingEntretien: null,
+      searchTerm: "",
+      currentPage: 1,
+      perPage: 5
+    };
+  },
 
   async created() {
     await this.fetchVehicules();
-    this.fetchEntretiens();
+    await this.fetchEntretiens();
   },
- computed: {
-  filteredEntretiens() {
-    return this.entretiens.filter(e =>
-      (e.vehicule?.immatriculation + " " + e.type + " " + e.remarques)
-        .toLowerCase()
-        .includes(this.searchTerm.toLowerCase())
-    );
+
+  computed: {
+    filteredEntretiens() {
+      return this.entretiens.filter(e =>
+        (e.vehicule?.immatriculation + " " + e.type + " " + e.remarques)
+          .toLowerCase()
+          .includes(this.searchTerm.toLowerCase())
+      );
+    },
+
+    paginatedEntretiens() {
+      const start = (this.currentPage - 1) * this.perPage;
+      return this.filteredEntretiens.slice(start, start + this.perPage);
+    },
+
+    totalPages() {
+      return Math.max(1, Math.ceil(this.filteredEntretiens.length / this.perPage));
+    }
   },
-  paginatedEntretiens() {
-    const start = (this.currentPage - 1) * this.perPage;
-    const end = start + this.perPage;
-    return this.filteredEntretiens.slice(start, end);
-  },
-  totalPages() {
-    return Math.ceil(this.filteredEntretiens.length / this.perPage);
-  }
-},
 
   methods: {
-    async fetchVehicules() { 
-      this.vehicules = (await api.get("/vehicules")).data; },
-
-    async fetchEntretiens() { 
-      this.entretiens = (await api.get("/entretiens")).data; },
-
-    openEditModal(e) {
-       this.editingEntretien = e; 
-       this.entretienForm = { ...e }; 
-       document.getElementById("openModalBtn").click();
+    async fetchVehicules() {
+      this.vehicules = (await api.get("/vehicules")).data;
     },
-    
-    async saveEntretien() {
-      if(this.editingEntretien) await api.put(`/entretiens/${this.editingEntretien.id}`, this.entretienForm);
-      else await api.post("/entretiens", this.entretienForm);
-      this.fetchEntretiens();
+
+    async fetchEntretiens() {
+      this.entretiens = (await api.get("/entretiens")).data;
+    },
+
+    // ▶ Ouvrir le modal pour ajouter
+    openAddModal() {
+      this.editingEntretien = null;
       this.resetForm();
-      bootstrap.Modal.getInstance(
-       document.getElementById("addEntretienModal")).hide();
-    },
-    resetForm()
-     { 
-      this.entretienForm = { vehicule_id: "", date_entretien: "", type: "", remarques: "" }; 
-      this.editingEntretien = null; },
 
-    async deleteEntretien(id)  { 
-      if(confirm("Voulez-vous supprimer cet entretien ?")) 
-    { await api.delete(`/entretiens/${id}`); 
-      this.fetchEntretiens(); 
-    } 
-  },
-    formatDate(date) { if(!date) return ""; return new Date(date).toLocaleDateString("fr-FR"); }
+      const modalEl = document.getElementById("addEntretienModal");
+      const modal = new Modal(modalEl);
+      modal.show();
+    },
+
+    // ▶ Ouvrir le modal pour modifier
+    openEditModal(e) {
+      this.editingEntretien = e;
+      this.entretienForm = { ...e };
+
+      const modalEl = document.getElementById("addEntretienModal");
+      const modal = new Modal(modalEl);
+      modal.show();
+    },
+
+    async saveEntretien() {
+      try {
+        if (!this.entretienForm.vehicule_id || !this.entretienForm.date_entretien || !this.entretienForm.type) {
+          alert("Veuillez remplir tous les champs obligatoires !");
+          return;
+        }
+
+        if (this.editingEntretien) {
+          await api.put(`/entretiens/${this.editingEntretien.id}`, this.entretienForm);
+        } else {
+          await api.post("/entretiens", this.entretienForm);
+        }
+
+        await this.fetchEntretiens();
+        this.resetForm();
+
+        const modalEl = document.getElementById("addEntretienModal");
+        Modal.getOrCreateInstance(modalEl).hide();
+
+        this.successMessage = this.editingEntretien
+          ? "Entretien modifié avec succès !"
+          : "Entretien ajouté avec succès !";
+
+        setTimeout(() => (this.successMessage = ""), 3000);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+      } catch (err) {
+        console.error("Erreur :", err);
+        this.successMessage = "Erreur lors de l'enregistrement. Réessaye.";
+        setTimeout(() => (this.successMessage = ""), 3500);
+      }
+    },
+
+    resetForm() {
+      this.entretienForm = { vehicule_id: "", date_entretien: "", type: "", remarques: "" };
+    },
+
+    async deleteEntretien(id) {
+      if (confirm("Voulez-vous supprimer cet entretien ?")) {
+        await api.delete(`/entretiens/${id}`);
+        this.fetchEntretiens();
+      }
+    },
+
+    formatDate(date) {
+      if (!date) return "";
+      return new Date(date).toLocaleDateString("fr-FR");
+    }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -233,12 +269,11 @@ export default {
 .table th { 
   user-select: none; 
   vertical-align: middle;
- }
+}
 .table td { 
   vertical-align: middle;
- }
+}
 .btn { 
   border-radius: 8px;
-  }
-
+}
 </style>

@@ -1,5 +1,8 @@
 <template>
-  <div class="container mt-4">
+        <div class="container mt-4">
+          <div v-if="successMessage" class="alert alert-success text-center">
+        {{ successMessage }}
+      </div>
        <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
           <button
@@ -34,13 +37,13 @@
               <tr>
                 <th @click="sortBy('nom')" style="cursor:pointer">
                   Nom
-                  <i v-if="sortKey === 'nom' && sortOrder === 'asc'" class="bi bi-caret-up-fill"></i>
-                  <i v-if="sortKey === 'nom' && sortOrder === 'desc'" class="bi bi-caret-down-fill"></i>
+                  <i v-if="sortKey === 'prenom' && sortOrder === 'asc'" class="bi bi-caret-up-fill"></i>
+                  <i v-if="sortKey === 'prenom' && sortOrder === 'desc'" class="bi bi-caret-down-fill"></i>
                 </th>
                 <th @click="sortBy('prenom')" style="cursor:pointer">
                   Prénom
-                  <i v-if="sortKey === 'prenom' && sortOrder === 'asc'" class="bi bi-caret-up-fill"></i>
-                  <i v-if="sortKey === 'prenom' && sortOrder === 'desc'" class="bi bi-caret-down-fill"></i>
+                  <i v-if="sortKey === 'nom' && sortOrder === 'asc'" class="bi bi-caret-up-fill"></i>
+                  <i v-if="sortKey === 'nom' && sortOrder === 'desc'" class="bi bi-caret-down-fill"></i>
                 </th>
                 <th>Téléphone</th>
                 <th>Permis</th>
@@ -50,8 +53,8 @@
             </thead>
             <tbody>
               <tr v-for="d in paginatedDrivers" :key="d.id">
-                <td>{{ d.nom }}</td>
                 <td>{{ d.prenom }}</td>
+                <td>{{ d.nom }}</td>
                 <td>{{ d.telephone }}</td>
                 <td>{{ d.permis }}</td>
                 <td>{{ formatDate(d.created_at) }}</td>
@@ -134,12 +137,12 @@
           <form @submit.prevent="saveDriver">
             <div class="modal-body">
               <div class="mb-3">
-                <label class="form-label">Nom</label>
-                <input v-model="driverForm.nom" class="form-control" required />
-              </div>
-              <div class="mb-3">
                 <label class="form-label">Prénom</label>
                 <input v-model="driverForm.prenom" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Nom</label>
+                <input v-model="driverForm.nom" class="form-control" required />
               </div>
               <div class="mb-3">
                 <label class="form-label">Téléphone</label>
@@ -164,104 +167,126 @@
     </div>
   </div>
   
-  <button
-  id="openModalBtn"
-  data-bs-toggle="modal"
-  data-bs-target="#addDriverModal"
-  style="display: none;">
-</button>
-
+ 
 </template>
 
 
 <script>
 import api from "../api.js";
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
+import { Modal } from "bootstrap";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 export default {
- data() {
-  return {
-    drivers: [],
-    driverForm: { nom: "", prenom: "", telephone: "", permis: "" },
-    editingDriver: null,
-    searchTerm: "",
-    sortKey: "nom",
-    sortOrder: "asc",
-    currentPage: 1,      // page actuelle
-    perPage: 5           // nombre d'éléments par page
-  };
-},
+  data() {
+    return {
+      successMessage: "",
+      drivers: [],
+      driverForm: { prenom: "", nom: "", telephone: "", permis: "" },
+      editingDriver: null,
+      searchTerm: "",
+      sortKey: "nom",
+      sortOrder: "asc",
+      currentPage: 1,
+      perPage: 5
+    };
+  },
 
   async created() {
     this.fetchDrivers();
   },
- computed: {
-  filteredDrivers() {
-    let list = this.drivers.filter((d) =>
-      (d.nom + " " + d.prenom + " " + d.telephone + " " + d.permis)
-        .toLowerCase()
-        .includes(this.searchTerm.toLowerCase())
-    );
-    list.sort((a, b) => {
-      const modifier = this.sortOrder === "asc" ? 1 : -1;
-      if (a[this.sortKey] < b[this.sortKey]) return -1 * modifier;
-      if (a[this.sortKey] > b[this.sortKey]) return 1 * modifier;
-      return 0;
-    });
-    return list;
-  },
 
-  paginatedDrivers() {
-    const start = (this.currentPage - 1) * this.perPage;
-    const end = start + this.perPage;
-    return this.filteredDrivers.slice(start, end);
-  },
+  computed: {
+    filteredDrivers() {
+      let list = this.drivers.filter((d) =>
+        (d.prenom + " " + d.nom + " " + d.telephone + " " + d.permis)
+          .toLowerCase()
+          .includes(this.searchTerm.toLowerCase())
+      );
 
-  totalPages() {
-    return Math.ceil(this.filteredDrivers.length / this.perPage) || 1;
-  }
-},
+      list.sort((a, b) => {
+        const modifier = this.sortOrder === "asc" ? 1 : -1;
+        if (a[this.sortKey] < b[this.sortKey]) return -1 * modifier;
+        if (a[this.sortKey] > b[this.sortKey]) return 1 * modifier;
+        return 0;
+      });
+
+      return list;
+    },
+
+    paginatedDrivers() {
+      const start = (this.currentPage - 1) * this.perPage;
+      const end = start + this.perPage;
+      return this.filteredDrivers.slice(start, end);
+    },
+
+    totalPages() {
+      return Math.ceil(this.filteredDrivers.length / this.perPage) || 1;
+    }
+  },
 
   methods: {
     async fetchDrivers() {
       const res = await api.get("/drivers");
       this.drivers = res.data;
     },
-  openEditModal(driver) {
-  console.log("Driver reçu :", driver);  // 👈 voir si les données arrivent
-  this.editingDriver = driver;
-  this.driverForm = { ...driver };
-  document.getElementById("openModalBtn").click();
-},
 
-  async saveDriver() {
-  if (this.editingDriver) {
-    await api.put(`/drivers/${this.editingDriver.id}`, this.driverForm);
-  } else {
-    await api.post("/drivers", this.driverForm);
-  }
+    // ✅ OUVERTURE PROPRE DU MODAL (sans bouton caché)
+    openEditModal(driver) {
+      this.editingDriver = driver;
+      this.driverForm = { ...driver };
 
-  this.fetchDrivers();
-  this.resetForm();
+      const modalEl = document.getElementById("addDriverModal");
+      const modalInstance = Modal.getOrCreateInstance(modalEl);
+      modalInstance.show();  // ← ouverture garantie
+    },
 
-  // 🔥 Fermer le modal proprement
-      const modal = bootstrap.Modal.getOrCreateInstance(
-        document.getElementById("addDriverModal")
-      );
-      modal.hide();
-},
+    // ✅ ENREGISTREMENT + FERMETURE GARANTIE DU MODAL
+    async saveDriver() {
+      try {
+        if (this.editingDriver) {
+          await api.put(`/drivers/${this.editingDriver.id}`, this.driverForm);
+        } else {
+          await api.post("/drivers", this.driverForm);
+        }
+
+        await this.fetchDrivers();
+        this.resetForm();
+
+        // 🔥 FERMETURE 100% GARANTIE
+        const modalEl = document.getElementById("addDriverModal");
+        const modalInstance = Modal.getOrCreateInstance(modalEl);
+        modalInstance.hide();
+
+        // ✔ Message succès
+        this.successMessage = this.editingDriver
+          ? "Conducteur modifié avec succès !"
+          : "Conducteur ajouté avec succès !";
+
+        setTimeout(() => (this.successMessage = ""), 3000);
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        this.editingDriver = null;
+
+      } catch (err) {
+        console.error("Erreur :", err);
+        this.successMessage = "Erreur lors de l'enregistrement. Réessaye.";
+        setTimeout(() => (this.successMessage = ""), 3500);
+      }
+    },
 
     resetForm() {
-      this.driverForm = { nom: "", prenom: "", telephone: "", permis: "" };
+      this.driverForm = { prenom: "", nom: "", telephone: "", permis: "" };
       this.editingDriver = null;
     },
+
     async deleteDriver(id) {
       if (confirm("Voulez-vous supprimer ce chauffeur ?")) {
         await api.delete(`/drivers/${id}`);
         this.fetchDrivers();
       }
     },
+
     sortBy(key) {
       if (this.sortKey === key) {
         this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
@@ -270,6 +295,7 @@ export default {
         this.sortOrder = "asc";
       }
     },
+
     formatDate(date) {
       if (!date) return "";
       return new Date(date).toLocaleDateString("fr-FR", {
