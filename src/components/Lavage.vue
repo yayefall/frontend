@@ -496,6 +496,8 @@ export default {
       doc.save(`lavages_${today}.pdf`);
     },
 
+    
+
     async getImageDataUrl(url) {
       const res = await fetch(url);
       if (!res.ok) throw new Error("logo not found");
@@ -506,7 +508,63 @@ export default {
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
+    },
+
+    async exportPDFReceipt(lavage) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const leftMargin = 40;
+  let y = 40;
+
+  // ▷ En-tête stylé
+  doc.setFillColor(13, 110, 253); // bleu bootstrap
+  doc.rect(0, 0, doc.internal.pageSize.width, 60, "F"); // bande en haut
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text("REÇU DE LAVAGE", doc.internal.pageSize.width / 2, 40, { align: "center" });
+
+  y += 80;
+
+  // ▷ Informations du lavage
+  const rows = [
+    ["Champ", "Détails"],
+    ["Date", this.formatDate(lavage.date_lavage)],
+    ["Véhicule", lavage.vehicule?.immatriculation || "Non assigné"],
+    ["Type", lavage.type],
+    ["Effectué par", lavage.effectué_par]
+  ];
+
+  autoTable(doc, {
+    startY: y,
+    head: [rows[0]],
+    body: rows.slice(1),
+    theme: "grid",
+    styles: { fontSize: 12, cellPadding: 8 },
+    headStyles: { fillColor: [13, 110, 253], textColor: 255 },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    margin: { left: leftMargin, right: leftMargin },
+    didDrawPage: (data) => {
+      // ▷ Pied de page
+      const pageHeight = doc.internal.pageSize.height;
+      const pageWidth = doc.internal.pageSize.width;
+      const page = doc.internal.getCurrentPageInfo().pageNumber;
+      const footerY = pageHeight - 30;
+
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.line(leftMargin, footerY - 5, pageWidth - leftMargin, footerY - 5); // ligne séparatrice
+      doc.text("CarYayeFall Pro — YayeFallDev Lavage", leftMargin, footerY);
+      doc.text("Tel: +221 77 000 00 00 | Email: contact@caryayefall.com", leftMargin, footerY + 12);
+      doc.text(`Page ${page}`, pageWidth - leftMargin - 40, footerY);
+      doc.text(`Exporté le : ${new Date().toLocaleDateString()}`, pageWidth - leftMargin - 120, footerY + 12);
     }
+  });
+
+  // ▷ Sauvegarde PDF
+  const today = new Date().toISOString().slice(0, 10);
+  doc.save(`reçu_lavage_${today}.pdf`);
+}
+
   }
 };
 </script>
