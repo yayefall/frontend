@@ -1,7 +1,7 @@
 <template>
   <div class="container mt-4">
     <div class="py-3 mb-4">
-      <h3 class="text-center text-white m-0">HISTORIQUE DU TABLEAU DE BOARD</h3>
+      <h3 class="text-center text-white m-0">HISTORIQUE DU TABLEAU DE BORD</h3>
     </div>
 
     <!-- FILTRES -->
@@ -73,16 +73,33 @@
     <div class="mb-4">
       <div class="card mb-3">
         <div class="card-body">
+          <h5 class="card-title">Statistiques par table</h5>
+          <!-- 🟦 CARDS DES STATISTIQUES PAR TABLE -->
+          <div class="row g-3">
+            <div v-for="t in tableStats" :key="t.table" class="col-md-4">
+              <div class="stat-card p-3 shadow rounded text-white" :class="t.color">
+                <h4 class="fw-bold">{{ t.table.toUpperCase() }}</h4>
+                <p class="m-0">Total : <strong>{{ t.total }}</strong></p>
+                <p class="m-0">Create : <strong>{{ t.create }}</strong></p>
+                <p class="m-0">Update : <strong>{{ t.update }}</strong></p>
+                <p class="m-0">Delete : <strong>{{ t.delete }}</strong></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <!-- GRAPHIQUE PAR TABLE -->
+    <div class="mb-4">
+      <div class="card mb-3 shadow">
+        <div class="card-body">
           <h5 class="card-title">Actions par table</h5>
           <canvas id="tableChart"></canvas>
         </div>
       </div>
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Actions par semaine</h5>
-          <canvas id="weekChart"></canvas>
-        </div>
-      </div>
+
+  
+</div>
+
     </div>
   </div>
 </template>
@@ -96,8 +113,11 @@ import autoTable from "jspdf-autotable";
 export default {
   data() {
     return {
+      tableStats: [],
+      allHistory: [],
+      fullHistory: [],
       history: [],
-      tables: ['lavages','drivers','entretiens','users','vehicules'],
+      tables: [],
       filterTable: '',
       filterUser: '',
       filterStartDate: '',
@@ -106,19 +126,17 @@ export default {
       itemsPerPage: 5,
       totalPages: 1,
       tableChart: null,
-      weekChart: null
     };
   },
 
   async mounted() {
-    await this.fetchHistory();     // D'abord récupérer les données
+  await this.loadAllHistory();   // 🔥 Doit être fait avant les stats
 
-    this.initTableChart();         // Ensuite créer les graphiques
-    this.initWeekChart();
+  await this.fetchHistory();
 
-    this.updateTableChart();       // Puis mettre à jour
-    this.updateWeekChart();
-  },
+  this.initTableChart();
+  this.updateTableChart();
+},
 
   watch: {
     filterTable() { this.applyFilters(); },
@@ -128,6 +146,44 @@ export default {
   },
 
   methods: {
+ /*async loadAllHistory() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await api.get("/history/exportAll", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    this.allHistory = res.data;
+
+    this.updateTableStats();
+    this.updateTableChart();
+
+  } catch (error) {
+    console.error("Erreur récupération all history :", error);
+  }
+},*/
+
+async loadAllHistory() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await api.get("/history/exportAll", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    this.allHistory = res.data;
+
+    // 🔥 Récupère automatiquement toutes les tables existantes
+    this.tables = [...new Set(this.allHistory.map(h => h.table_name))];
+
+    this.updateTableStats();
+  } catch (error) {
+    console.error("Erreur récupération all history :", error);
+  }
+},
+
+
     applyFilters() {
       this.currentPage = 1;
       this.fetchHistory();
@@ -151,9 +207,10 @@ export default {
         this.history = response.data.data;
         this.totalPages = response.data.totalPages;
 
-        // Mise à jour graphique en temps réel
+        // Mise à jour tableau + stats + graph
+        this.updateTableStats();
         this.updateTableChart();
-        this.updateWeekChart();
+
 
       } catch (error) {
         console.error("Erreur récupération historique :", error);
@@ -203,63 +260,30 @@ export default {
       this.tableChart.update();
     },
 
-    /* --------------------------
-       GRAPHIQUE PAR SEMAINE
-    -------------------------- */
-    initWeekChart() {
-      const ctx = document.getElementById("weekChart").getContext("2d");
-      this.weekChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            { label: 'Create', data: [], borderColor:'#198754', fill:false },
-            { label: 'Update', data: [], borderColor:'#0d6efd', fill:false },
-            { label: 'Delete', data: [], borderColor:'#dc3545', fill:false }
-          ]
-        }
-      });
-    },
+    updateTableStats() {
+      if (!this.allHistory.length) return;
 
-   updateWeekChart() {
-  if (!this.weekChart) return;
+      const stats = [];
 
-  const weekMap = {};
+      this.tables.forEach(t => {
+        const rows = this.allHistory.filter(h => h.table_name === t);
 
-  this.history.forEach(h => {
-    if(!h.created_at) return;
-
-    const d = new Date(h.created_at + 'Z'); // UTC
-    if (isNaN(d.getTime())) return;
-
-    const year = d.getFullYear();
-    const week = this.getWeekNumber(d);
-    const key = `${year}-S${week.toString().padStart(2,'0')}`;
-
-    if(!weekMap[key]) weekMap[key] = { create:0, update:0, delete:0 };
-
-    const action = h.action.toLowerCase();
-    if(['create','update','delete'].includes(action))
-      weekMap[key][action]++;
+      stats.push({
+      table: t,
+      total: rows.length,
+      create: rows.filter(r => r.action === "create").length,
+      update: rows.filter(r => r.action === "update").length,
+      delete: rows.filter(r => r.action === "delete").length,
+      color: ['success','primary','danger','warning','info'][Math.random()*5|0]
+    });
   });
 
-  const labels = Object.keys(weekMap).sort();
-  this.weekChart.data.labels = labels;
-  this.weekChart.data.datasets[0].data = labels.map(l => weekMap[l].create);
-  this.weekChart.data.datasets[1].data = labels.map(l => weekMap[l].update);
-  this.weekChart.data.datasets[2].data = labels.map(l => weekMap[l].delete);
-
-  this.weekChart.update();
+  this.tableStats = stats;
 },
 
-    getWeek(date) {
-      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-      const dayNum = d.getUTCDay() || 7;
-      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-      return `S${Math.ceil((((d - yearStart) / 86400000) + 1) / 7)}`;
-    },
 
+
+  
     /* --------------------------
        EXPORT PDF
     -------------------------- */
@@ -323,4 +347,20 @@ export default {
 .pagination .page-item.active .page-link { background-color:#0d6efd; border-color:#0d6efd; color:white; }
 .pagination .page-item.disabled .page-link { opacity:0.5; cursor:not-allowed; }
 .table th, .table td { vertical-align: middle; }
+
+.stat-card {
+  background: linear-gradient(135deg, #0d6efd, #0744a6);
+  border-left: 6px solid white;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.stat-card.success { background: linear-gradient(135deg, #198754, #0f5738); }
+.stat-card.danger { background: linear-gradient(135deg, #dc3545, #8a1c26); }
+.stat-card.warning { background: linear-gradient(135deg, #ffc107, #b38600); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 </style>

@@ -21,7 +21,7 @@
       </form>
 
       <p v-if="error" class="text-danger">{{ error }}</p>
-      <p class="note">© 2025 VehiculeApp</p>
+      <p class="note">© 2025 CHEC AUTOMOBILE</p>
     </div>
   </div>
 </template>
@@ -80,7 +80,7 @@ export default {
   align-items: center;
   min-height: 100vh;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #1e1c9e, #1e1c9e);
   font-family: 'Poppins', sans-serif;
   box-sizing: border-box;
 }
@@ -124,7 +124,7 @@ export default {
 }
 
 .input-group input:focus {
-  border-color: #667eea;
+  border-color: #1e1c9e;
   outline: none;
 }
 
@@ -133,7 +133,7 @@ button {
   padding: 12px;
   border: none;
   border-radius: 10px;
-  background: #667eea;
+  background: #1e1c9e;
   color: #fff;
   font-size: 18px;
   cursor: pointer;
